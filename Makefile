@@ -1,5 +1,7 @@
-all: target
+LIBS  =  -l coap-2-openssl
+CFLAGS = -Wall
 
-target:
-	gcc main.c reporting.c -o fota-sample
+SRC=$(wildcard *.c)
 
+all: $(OBJS)
+	gcc -o fota-sample $(SRC) $(CFLAGS) $(LIBS)

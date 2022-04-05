@@ -1,2 +1,4 @@
-./fota-sample*
+fota-sample
+*.crt
+*.pem
 
