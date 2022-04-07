@@ -1,8 +1,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "coap.h"
+#include "download.h"
 #include "reporting.h"
 
 #define VERSION "1.0.0"
@@ -10,7 +12,10 @@
 #define CERT_FILE "cert.crt"
 #define KEY_FILE "key.pem"
 
-void upgrade_handler(t_fota_response *resp);
+void upgrade_cb(fota_response_t *resp);
+
+bool download_block_cb(int block_num, int total_blocks, uint8_t *buf,
+                       size_t len);
 
 int main(int argc, char **argv) {
   char *version = VERSION;
@@ -19,43 +24,65 @@ int main(int argc, char **argv) {
     version = argv[1];
   }
 
-  t_fota_report report = {
-      .manufacturer = "Lab5e Demo Corp",
-      .model = "model 01",
-      .serial = "0001",
-      .version = version,
+  fota_report_t report = {
+      .manufacturer = (uint8_t *)"Lab5e Demo Corp",
+      .model = (uint8_t *)"model 01",
+      .serial = (uint8_t *)"0001",
+      .version = (uint8_t *)version,
   };
 
-  if (!coap_init(CERT_FILE, KEY_FILE)) {
+  coap_state_t state;
+
+  if (!coap_init(&state, CERT_FILE, KEY_FILE)) {
     printf("Could not init CoAP library\n");
     exit(1);
   }
 
   // The response is a callback from the CoAP library and the upgrade handler
   // function is called when there's a new version available.
-  coap_set_upgrade_handler(upgrade_handler);
+  coap_set_upgrade_handler(upgrade_cb);
 
-  if (!coap_send_report(&report)) {
+  if (!coap_send_report(&state, &report)) {
     printf("Error sending report to server\n");
     exit(3);
   }
 
+  printf("Wait for report exchange\n");
   // Wait for the exchange to complete
-  coap_wait_for_exchange();
+  coap_wait_for_exchange(&state);
 
-  coap_shutdown();
+  printf("Shutdown\n");
+  coap_shutdown(&state);
+  printf("Close\n");
   return 0;
 }
 
-void upgrade_handler(t_fota_response *resp) {
+void upgrade_cb(fota_response_t *resp) {
   if (!resp->has_new_version) {
     printf("No new version available\n");
     return;
   }
 
-  printf("There's a new version available at %s:%d/%s\n", resp->hostname,
+  printf("There's a new version available at coap://%s:%d%s\n", resp->hostname,
          resp->port, resp->path);
 
-  // Download from the host/port combo. This is *usually* the same as the
-  //  coap_download_image(resp->hostname, resp->port, resp->path);
+  coap_download_firmware(resp->hostname, resp->port, resp->path,
+                         download_block_cb, CERT_FILE, KEY_FILE);
+  printf("Download started\n");
+}
+
+// Block counter for firmware dowload.
+static int last_block = -1;
+
+// Callback for block download. This checks if the block num is in sequence and
+// returns false if the download fails.
+bool download_block_cb(int block_num, int total_blocks, uint8_t *buf,
+                       size_t len) {
+  if (block_num != (last_block + 1)) {
+    printf("Downloaded block %d but expected block %d\n", block_num,
+           (last_block + 1));
+    return false;
+  }
+
+  return true;
 }

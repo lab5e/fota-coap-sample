@@ -12,12 +12,12 @@
 #define PATH_ID 3
 #define AVAILABLE_ID 4
 
-static size_t encode_tlv_string(uint8_t *buf, uint8_t id, const char *str);
-static bool decode_tlv_string(const uint8_t *buf, size_t *idx, char *str);
+static size_t encode_tlv_string(uint8_t *buf, uint8_t id, const uint8_t *str);
+static bool decode_tlv_string(const uint8_t *buf, size_t *idx, uint8_t *str);
 static int decode_tlv_uint32(const uint8_t *buf, size_t *idx, uint32_t *val);
 static bool decode_tlv_bool(const uint8_t *buf, size_t *idx, bool *val);
 
-bool fota_encode_report(t_fota_report *report, uint8_t *buf, size_t *len) {
+bool fota_encode_report(fota_report_t *report, uint8_t *buf, size_t *len) {
   size_t sz = encode_tlv_string(buf, FIRMWARE_VER_ID, report->version);
   sz +=
       encode_tlv_string(buf + sz, CLIENT_MANUFACTURER_ID, report->manufacturer);
@@ -27,17 +27,17 @@ bool fota_encode_report(t_fota_report *report, uint8_t *buf, size_t *len) {
   return true;
 }
 
-static size_t encode_tlv_string(uint8_t *buf, uint8_t id, const char *str) {
+static size_t encode_tlv_string(uint8_t *buf, uint8_t id, const uint8_t *str) {
   size_t ret = 0;
   buf[ret++] = id;
-  buf[ret++] = strlen(str);
-  for (uint8_t i = 0; i < strlen(str); i++) {
+  buf[ret++] = strlen((const char *)str);
+  for (uint8_t i = 0; i < strlen((const char *)str); i++) {
     buf[ret++] = str[i];
   }
   return ret;
 }
 
-bool fota_decode_response(uint8_t *buf, size_t len, t_fota_response *resp) {
+bool fota_decode_response(uint8_t *buf, size_t len, fota_response_t *resp) {
   size_t idx = 0;
   while (idx < len) {
     uint8_t id = buf[idx++];
@@ -70,7 +70,7 @@ bool fota_decode_response(uint8_t *buf, size_t len, t_fota_response *resp) {
   return true;
 }
 
-static bool decode_tlv_string(const uint8_t *buf, size_t *idx, char *str) {
+static bool decode_tlv_string(const uint8_t *buf, size_t *idx, uint8_t *str) {
   int len = (int)buf[(*idx)++];
   int i = 0;
   for (i = 0; i < len; i++) {

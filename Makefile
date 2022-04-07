@@ -1,5 +1,5 @@
 LIBS  =  -l coap-2-openssl
-CFLAGS = -Wall
+CFLAGS = -Wall -g
 
 SRC=$(wildcard *.c)
 
