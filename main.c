@@ -14,8 +14,8 @@
 
 void upgrade_cb(fota_response_t *resp);
 
-bool download_block_cb(int block_num, int total_blocks, uint8_t *buf,
-                       size_t len);
+bool download_block_cb(int block_num, uint8_t *buf, size_t len,
+                       uint32_t max_size);
 
 int main(int argc, char **argv) {
   char *version = VERSION;
@@ -73,16 +73,20 @@ void upgrade_cb(fota_response_t *resp) {
 
 // Block counter for firmware dowload.
 static int last_block = -1;
+static size_t downloaded_bytes = 0;
 
 // Callback for block download. This checks if the block num is in sequence and
 // returns false if the download fails.
-bool download_block_cb(int block_num, int total_blocks, uint8_t *buf,
-                       size_t len) {
+bool download_block_cb(int block_num, uint8_t *buf, size_t len,
+                       uint32_t max_size) {
   if (block_num != (last_block + 1)) {
     printf("Downloaded block %d but expected block %d\n", block_num,
            (last_block + 1));
     return false;
   }
-
+  downloaded_bytes += len;
+  printf("Downloaded %zi of %d bytes (block %d with %zi bytes)\n",
+         downloaded_bytes, max_size, block_num, len);
+  last_block = block_num;
   return true;
 }

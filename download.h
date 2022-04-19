@@ -6,8 +6,8 @@
 
 #include "coap.h"
 
-typedef bool (*download_cb_t)(int block_num, int block_count, uint8_t *buf,
-                              size_t block_size);
+typedef bool (*download_cb_t)(int block_num, uint8_t *buf, size_t block_size,
+                              uint32_t max_size);
 
 /**
  * Download the firmware via blockwise transfer.
