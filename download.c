@@ -14,8 +14,8 @@ static void message_handler(coap_context_t *ctx, coap_session_t *session,
                             coap_pdu_t *sent, coap_pdu_t *received,
                             const coap_tid_t id);
 
-bool coap_download_firmware(const uint8_t *hostname, const int port,
-                            const uint8_t *path, download_cb_t callback,
+bool coap_download_firmware(const char *hostname, const int port,
+                            const char *path, download_cb_t callback,
                             const char *cert_file, const char *key_file) {
   if (!coap_connect(&state, (const char *)hostname, port, cert_file,
                     key_file)) {
@@ -39,13 +39,7 @@ bool coap_download_firmware(const uint8_t *hostname, const int port,
   download->code = COAP_REQUEST_GET;
   new_token(download);
 
-  uint8_t *pathptr = (uint8_t *)path;
-  if (pathptr[0] == '/') {
-    pathptr++;
-  }
-  coap_insert_optlist(&optlist, coap_new_optlist(COAP_OPTION_URI_PATH,
-                                                 strlen((const char *)pathptr),
-                                                 (const uint8_t *)pathptr));
+  set_path_options(path, &optlist);
 
   coap_add_optlist_pdu(download, &optlist);
 

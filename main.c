@@ -1,16 +1,26 @@
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "coap.h"
 #include "download.h"
 #include "reporting.h"
 
-#define VERSION "1.0.0"
+#ifndef VERSION
+#define VERSION "0.0.0"
+#endif
 
 #define CERT_FILE "cert.crt"
 #define KEY_FILE "key.pem"
+
+#define IMAGE_FILE "image.new"
+#define IMAGE_FILE_MODE 0700
+// Block counter for firmware dowload.
+static int last_block = -1;
+static size_t downloaded_bytes = 0;
 
 void upgrade_cb(fota_response_t *resp);
 
@@ -47,13 +57,10 @@ int main(int argc, char **argv) {
     exit(3);
   }
 
-  printf("Wait for report exchange\n");
   // Wait for the exchange to complete
   coap_wait_for_exchange(&state);
 
-  printf("Shutdown\n");
   coap_shutdown(&state);
-  printf("Close\n");
   return 0;
 }
 
@@ -66,14 +73,10 @@ void upgrade_cb(fota_response_t *resp) {
   printf("There's a new version available at coap://%s:%d%s\n", resp->hostname,
          resp->port, resp->path);
 
-  coap_download_firmware(resp->hostname, resp->port, resp->path,
-                         download_block_cb, CERT_FILE, KEY_FILE);
-  printf("Download started\n");
+  coap_download_firmware((const char *)resp->hostname, resp->port,
+                         (const char *)resp->path, download_block_cb, CERT_FILE,
+                         KEY_FILE);
 }
-
-// Block counter for firmware dowload.
-static int last_block = -1;
-static size_t downloaded_bytes = 0;
 
 // Callback for block download. This checks if the block num is in sequence and
 // returns false if the download fails.
@@ -84,9 +87,30 @@ bool download_block_cb(int block_num, uint8_t *buf, size_t len,
            (last_block + 1));
     return false;
   }
+  if (downloaded_bytes == 0) {
+    // This is the first packet. Delete the image file if it exists
+    struct stat stattmp;
+    if (stat(IMAGE_FILE, &stattmp) != -1) {
+      unlink(IMAGE_FILE);
+    }
+  }
   downloaded_bytes += len;
   printf("Downloaded %zi of %d bytes (block %d with %zi bytes)\n",
          downloaded_bytes, max_size, block_num, len);
   last_block = block_num;
+
+  // Append to image file
+  int fd = open(IMAGE_FILE, O_CREAT | O_WRONLY | O_APPEND, IMAGE_FILE_MODE);
+  if (fd < 0) {
+    printf("**** Error opening image file: %d\n", fd);
+  }
+  write(fd, buf, len);
+  close(fd);
+
+  if (downloaded_bytes == max_size) {
+    printf("Download is complete\n");
+    downloaded_bytes = 0;
+    last_block = -1;
+  }
   return true;
 }

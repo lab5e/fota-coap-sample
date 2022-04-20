@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "coap_util.h"
 
 void new_token(coap_pdu_t *pdu) {
@@ -31,4 +33,24 @@ uint32_t uint_opt_value(const uint8_t *data, const size_t len) {
     break;
   }
   return calc_len;
+}
+
+void set_path_options(const char *path, coap_optlist_t **optlist) {
+  uint8_t buf[64];
+  memset(buf, 0, sizeof(buf));
+  size_t buf_len = sizeof(buf);
+  int res = coap_split_path((const uint8_t *)path, strlen(path), buf, &buf_len);
+  if (res < 0) {
+    printf("Error parsing path %s\n", path);
+    return;
+  }
+  uint8_t *buf_ptr = buf;
+  while (res--) {
+    size_t len = coap_opt_length(buf_ptr);
+    if (len > 0) {
+      coap_insert_optlist(optlist, coap_new_optlist(COAP_OPTION_URI_PATH, len,
+                                                    coap_opt_value(buf_ptr)));
+    }
+    buf_ptr += coap_opt_size(buf_ptr);
+  }
 }
