@@ -1,5 +1,7 @@
-fota-sample
+fota-sample*
 image.new
 *.crt
 *.pem
+run
+server
 

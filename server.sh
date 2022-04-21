@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/bash
 
 # Launch the report-and-possibly-download every 30 seconds
-while 1; do
+while /bin/true; do
     ./fota-sample
     # If there is a new image it will be downloaded to image.new. Rename to fota-sample
     # to use the new version.

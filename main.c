@@ -29,10 +29,7 @@ bool download_block_cb(int block_num, uint8_t *buf, size_t len,
 
 int main(int argc, char **argv) {
   char *version = VERSION;
-  printf("FOTA demo client, file name: %s\n", argv[0]);
-  if (argc == 2) {
-    version = argv[1];
-  }
+  printf("FOTA demo client, version: %s\n", version);
 
   fota_report_t report = {
       .manufacturer = (uint8_t *)"Lab5e Demo Corp",
@@ -108,7 +105,7 @@ bool download_block_cb(int block_num, uint8_t *buf, size_t len,
   close(fd);
 
   if (downloaded_bytes == max_size) {
-    printf("Download is complete\n");
+    printf("Download complate\n");
     downloaded_bytes = 0;
     last_block = -1;
   }
