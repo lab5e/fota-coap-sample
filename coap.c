@@ -103,7 +103,11 @@ bool coap_init(coap_state_t *state, const char *cert_file,
   // Register a message handler to process responses from the server.
   coap_register_response_handler(state->ctx, message_handler);
   coap_register_nack_handler(state->ctx, nack_handler);
-  coap_register_event_handler(state->ctx, event_handler);
+
+  // Enable this handler to get events for DTLS. This can be useful for
+  // debugging if you are having issues connecting.
+  //
+  //  coap_register_event_handler(state->ctx, event_handler);
   return true;
 }
 
